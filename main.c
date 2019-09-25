@@ -11,59 +11,13 @@
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
 
-int setMux(int n)
-{
-    if (n > 7 || n < 0)
-    {
-        return -1;
-    }
-    // digits: P1.3;1.4;1.5
-    if (n == 0)
-    { //000
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
-    }
-    else if (n == 1)
-    { //001
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN5);
-    }
-    else if (n == 2)
-    { //010
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
-    }
-    else if (n == 3)
-    { //011
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
-    }
-    else if (n == 4)
-    { //100
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
-    }
-    else if (n == 5)
-    { //101
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
-    }
-    else if (n == 6)
-    { //110
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
-    }
-    else if (n == 7)
-    { //111
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1,
-        GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
-    }
-    return 0;
-}
+int setMux(int n);
 
 void main(void)
 {
     char buttonState = 0; //Current button press state (to allow edge detection)
     int muxToggle = 0;
+    int displayDur = 0;
     setMux(muxToggle);
 
     /*
@@ -120,8 +74,9 @@ void main(void)
             Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
             buttonState = 0;                          //Capture new button state
             // --------------------------------
-            muxToggle = (muxToggle + 1) % 2;
+            muxToggle = (muxToggle + 1) % 3;
             setMux(muxToggle); // set GPIO pins to value of mux toggle
+            displayDur = 0; // force re-set of lcd display
 
             // TODO: read from a1 (8 bits)
             // --------------------------------
@@ -130,10 +85,13 @@ void main(void)
         //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
         if (ADCState == 0)
         {
-            showHex((int)ADCResult); //Put the previous result on the LCD display
+            if (displayDur == 0){
+                showHex((int) ADCResult); //Put the previous result on the LCD display
+                displayDur = 1500;
+            }
+            displayDur -= 1;
             ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
             ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
-
         }
 
         /*
@@ -437,3 +395,53 @@ void ADC_ISR(void)
         ADCResult = ADC_getResults(ADC_BASE);
     }
 }
+
+int setMux(int n)
+{
+    if (n > 7 || n < 0)
+    {
+        return -1;
+    }
+    // digits: P1.3;1.4;1.5
+    if (n == 0)
+    { //000
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
+    }
+    else if (n == 1)
+    { //001
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN5);
+    }
+    else if (n == 2)
+    { //010
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
+    }
+    else if (n == 3)
+    { //011
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
+    }
+    else if (n == 4)
+    { //100
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
+    }
+    else if (n == 5)
+    { //101
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
+    }
+    else if (n == 6)
+    { //110
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
+    }
+    else if (n == 7)
+    { //111
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1,
+        GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
+    }
+    return 0;
+}
+
