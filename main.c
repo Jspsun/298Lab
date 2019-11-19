@@ -58,6 +58,8 @@ void main(void)
 
     displayScrollText("ECE 298");
 
+    // preloop
+
     while (1) //Do this when you want an infinite loop of code
     {
         //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
@@ -78,8 +80,8 @@ void main(void)
             setMux(muxToggle); // set GPIO pins to value of mux toggle
             displayDur = 0; // force re-set of lcd display
 
-            // TODO: read from a1 (8 bits)
-            // --------------------------------
+
+
         }
 
         //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
