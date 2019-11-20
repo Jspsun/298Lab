@@ -26,7 +26,8 @@
 #define ADC_IN_PORT     GPIO_PORT_P8
 #define ADC_IN_PIN      GPIO_PIN1
 #define ADC_IN_CHANNEL  ADC_INPUT_A9
-
+void output_pwm_off();
+void output_pwm_off();
 void Init_GPIO(void);
 void Init_Clock(void);
 void Init_UART(void);

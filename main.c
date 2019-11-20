@@ -128,7 +128,6 @@ void main(void)
     //All done initializations - turn interrupts back on.
     __enable_interrupt();
 
-
     // preloop to get some average values
     int i = 0;
     for (i = 0; i< NUM_SAMPLES_TO_AVERAGE; i++){
@@ -147,14 +146,16 @@ void main(void)
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
                 & (buttonState == 0)) //Look for rising edge
         {
-            Timer_A_stop(TIMER_A0_BASE);    //Shut off PWM signal
+            output_pwm_off();
+
             buttonState = 1;                //Capture new button state
 
         }
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
                 & (buttonState == 1)) //Look for falling edge
         {
-            Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
+            output_pwm_on();
+//            Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
             buttonState = 0;                          //Capture new button state
             // --------------------------------
             muxState = (muxState + 1) % 5;
@@ -397,7 +398,7 @@ void Init_PWM(void)
     param.timerPeriod = TIMER_A_PERIOD; //Defined in main.h
     param.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
     param.compareOutputMode = TIMER_A_OUTPUTMODE_RESET_SET;
-    param.dutyCycle = HIGH_COUNT; //Defined in main.h
+    param.dutyCycle = HIGH_COUNT_OFF; //Defined in main.h
 
     //PWM_PORT PWM_PIN (defined in main.h) as PWM output
     GPIO_setAsPeripheralModuleFunctionOutputPin(
