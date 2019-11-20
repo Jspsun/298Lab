@@ -91,7 +91,6 @@ void main(void)
     char buttonState = 0; //Current button press state (to allow edge detection)
     int muxState = 0;
     int displayDur = 0;
-    setMux(muxState);
 
     /*
      * Functions with two underscores in front are called compiler intrinsics.
@@ -129,7 +128,6 @@ void main(void)
     //All done initializations - turn interrupts back on.
     __enable_interrupt();
 
-    displayScrollText("ECE 298");
 
     // preloop to get some average values
     int i = 0;
@@ -140,7 +138,6 @@ void main(void)
             setMux(sensor);
             delay(50);
             storeSensorReadings(averagedValues, sensor, i);
-
         }
     }
 
@@ -160,7 +157,7 @@ void main(void)
             Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
             buttonState = 0;                          //Capture new button state
             // --------------------------------
-            muxState = (muxState + 1) % 3;
+            muxState = (muxState + 1) % 5;
             setMux(muxState); // set GPIO pins to value of mux toggle
             displayDur = 0; // force re-set of lcd display
 
@@ -499,45 +496,49 @@ int setMux(int n)
     {
         return -1;
     }
-    // digits: P1.3;1.4;1.5
+    // digits: P2.7;2.5;1.5
     if (n == 0)
     { //000
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN5 | GPIO_PIN7);
     }
     else if (n == 1)
     { //001
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
         GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN5 | GPIO_PIN7);
     }
     else if (n == 2)
     { //010
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN7);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN5);
     }
     else if (n == 3)
     { //011
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN7);
     }
     else if (n == 4)
     { //100
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4 | GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN5);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN7);
     }
     else if (n == 5)
     { //101
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN5);
+//        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN8);
+//        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN10 | GPIO_PIN5);
     }
     else if (n == 6)
     { //110
-        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN5);
-        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3 | GPIO_PIN4);
+//        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN10);
+//        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN5 | GPIO_PIN8);
     }
     else if (n == 7)
     { //111
         GPIO_setOutputHighOnPin(GPIO_PORT_P1,
-        GPIO_PIN3 | GPIO_PIN4 | GPIO_PIN5);
+        GPIO_PIN10 | GPIO_PIN8 | GPIO_PIN5);
     }
     return 0;
 }
