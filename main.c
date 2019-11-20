@@ -1,15 +1,23 @@
 #include "main.h"
 #include "driverlib/driverlib.h"
+#include <stdlib.h>
 #include "hal_LCD.h"
 #include <stdio.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
+#define lightDex 0
+#define tempZoneOneDex 1
+#define tempZoneTwoDex 2
+#define moistureZoneOneDex 3
+#define moistureZoneTwoDex 4
+
 
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
 int WAIT_TIMER = 900; //TODO: fine tune this number
 int NUM_SENSORS = 5;
+int zoneToDisplay = 0;
 
 
 
@@ -19,65 +27,66 @@ typedef struct{
     float tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
     float moistureZoneOne[NUM_SAMPLES_TO_AVERAGE];
     float moistureZoneTwo[NUM_SAMPLES_TO_AVERAGE];
-} values;
+} Values;
 
 int delay(int n);
 int setMux(int n);
-int storeSensorReadings(values* averagedValues, int sensor);
-float getAverageSensorReading(values* averagedValues, int sensor);
+int storeSensorReadings(Values* averagedValues, int sensor, int i);
+float getAverageSensorReading(Values* averagedValues, int sensor);
 
-float getAverageSensorReading(values* averagedValues, int sensor){
+float getAverageSensorReading(Values* averagedValues, int sensor){
     int i = 0;
     float total = 0.0;
-    if(sensor == 0){
-        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    if(sensor == lightDex){
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
             total += averagedValues->light[i];
         }
     }
-    else if(sensor == 1){
-       for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if(sensor == tempZoneOneDex){
+       for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
            total += averagedValues->tempZoneOne[i];
        }
     }
-    else if(sensor == 2){
-        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if(sensor == tempZoneTwoDex){
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
             total += averagedValues->tempZoneTwo[i];
         }
     }
-    else if(sensor == 3){
-        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if(sensor == moistureZoneOneDex){
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
             total += averagedValues->moistureZoneOne[i];
         }
     }
-    else if(sensor == 4){
-        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if(sensor == moistureZoneTwoDex){
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
             total += averagedValues->moistureZoneTwo[i];
         }
     }
-    return (total/NUM_SAMPLES_TO_AVERAGE)
+    return (total/NUM_SAMPLES_TO_AVERAGE);
 }
 
-int storeSensorReadings(values* averagedValues, int sensor){
-    if(sensor == 0){
+int storeSensorReadings(Values* averagedValues, int sensor, int i){
+    if(sensor == lightDex){
         averagedValues->light[i] = ADCResult;
     }
-    else if(sensor == 1){
+    else if(sensor == tempZoneOneDex){
         averagedValues->tempZoneOne[i] = ADCResult;
     }
-    else if(sensor == 2){
+    else if(sensor == tempZoneTwoDex){
         averagedValues->tempZoneTwo[i] = ADCResult;
     }
-    else if(sensor == 3){
+    else if(sensor == moistureZoneOneDex){
         averagedValues->moistureZoneOne[i] = ADCResult;
     }
-    else if(sensor == 4){
+    else if(sensor == moistureZoneTwoDex){
         averagedValues->moistureZoneTwo[i] = ADCResult;
     }
+    return 1;
 }
 
 void main(void)
 {
-    values *averagedValues = malloc(sizeof(values));
+    Values* averagedValues = malloc(sizeof(Values));
 
     char buttonState = 0; //Current button press state (to allow edge detection)
     int muxState = 0;
@@ -130,15 +139,13 @@ void main(void)
         for(sensor = 0; sensor< NUM_SENSORS; sensor++){
             setMux(sensor);
             delay(50);
-
-            storeSensorReadings(averagedValues, sensor);
-            float val = getAverageSensorReading(averagedValues, sensor);
+            storeSensorReadings(averagedValues, sensor, i);
 
         }
     }
 
-    while (1) //Do this when you want an infinite loop of code
-    {
+    while (1){
+        // toggle the display for each zone
         //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
                 & (buttonState == 0)) //Look for rising edge
