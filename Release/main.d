@@ -43,10 +43,11 @@ main.obj: ../driverlib/eusci_a_spi.h
 main.obj: ../driverlib/timer_b.h
 main.obj: ../driverlib/eusci_b_spi.h
 main.obj: ../driverlib/driverlib.h
-main.obj: ../hal_LCD.h
-main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h
+main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdlib.h
 main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/_ti_config.h
 main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/linkage.h
+main.obj: ../hal_LCD.h
+main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h
 main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdarg.h
 
 ../main.c: 
@@ -92,8 +93,9 @@ main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/s
 ../driverlib/timer_b.h: 
 ../driverlib/eusci_b_spi.h: 
 ../driverlib/driverlib.h: 
-../hal_LCD.h: 
-/Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h: 
+/Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdlib.h: 
 /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/_ti_config.h: 
 /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/linkage.h: 
+../hal_LCD.h: 
+/Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h: 
 /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdarg.h: 

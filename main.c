@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
-#define lightDex 0
+#define lightDex 4
 #define tempZoneOneDex 1
-#define tempZoneTwoDex 2
-#define moistureZoneOneDex 3
-#define moistureZoneTwoDex 4
+#define tempZoneTwoDex 3
+#define moistureZoneOneDex 2
+#define moistureZoneTwoDex 0
 
 
 
@@ -18,8 +18,6 @@ int16_t ADCResult = 0; //Storage for the ADC conversion result
 int WAIT_TIMER = 900; //TODO: fine tune this number
 int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
-
-
 
 typedef struct{
     float light[NUM_SAMPLES_TO_AVERAGE];
@@ -131,7 +129,7 @@ void main(void)
 
     // preloop to get some average values
     int i = 0;
-    for (i = 0; i< NUM_SAMPLES_TO_AVERAGE; i++){
+    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
         delay(WAIT_TIMER);
         int sensor = NUM_SENSORS;
         for(sensor = 0; sensor< NUM_SENSORS; sensor++){
@@ -140,7 +138,7 @@ void main(void)
             storeSensorReadings(averagedValues, sensor, i);
         }
     }
-
+    setMux(0);
     while (1){
         // toggle the display for each zone
         //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
