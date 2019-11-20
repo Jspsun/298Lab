@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
-#define lightDex 0
+#define lightDex 4
 #define tempZoneOneDex 1
-#define tempZoneTwoDex 2
-#define moistureZoneOneDex 3
-#define moistureZoneTwoDex 4
+#define tempZoneTwoDex 3
+#define moistureZoneOneDex 2
+#define moistureZoneTwoDex 0
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
@@ -155,8 +155,9 @@ void main(void)
             delay(50);
             storeSensorReadings(averagedValues, sensor, i);
         }
-    }
+   }
 
+    setMux(0);
     while (1)
     {
         // toggle the display for each zone
