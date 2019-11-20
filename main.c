@@ -11,17 +11,15 @@
 #define moistureZoneOneDex 3
 #define moistureZoneTwoDex 4
 
-
-
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
 int WAIT_TIMER = 900; //TODO: fine tune this number
 int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
+enum Servo servo;
 
-
-
-typedef struct{
+typedef struct
+{
     float light[NUM_SAMPLES_TO_AVERAGE];
     float tempZoneOne[NUM_SAMPLES_TO_AVERAGE];
     float tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
@@ -34,51 +32,68 @@ int setMux(int n);
 int storeSensorReadings(Values* averagedValues, int sensor, int i);
 float getAverageSensorReading(Values* averagedValues, int sensor);
 
-float getAverageSensorReading(Values* averagedValues, int sensor){
+float getAverageSensorReading(Values* averagedValues, int sensor)
+{
     int i = 0;
     float total = 0.0;
-    if(sensor == lightDex){
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    if (sensor == lightDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
             total += averagedValues->light[i];
         }
     }
-    else if(sensor == tempZoneOneDex){
-       for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
-           total += averagedValues->tempZoneOne[i];
-       }
+    else if (sensor == tempZoneOneDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->tempZoneOne[i];
+        }
     }
-    else if(sensor == tempZoneTwoDex){
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if (sensor == tempZoneTwoDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
             total += averagedValues->tempZoneTwo[i];
         }
     }
-    else if(sensor == moistureZoneOneDex){
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if (sensor == moistureZoneOneDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
             total += averagedValues->moistureZoneOne[i];
         }
     }
-    else if(sensor == moistureZoneTwoDex){
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    else if (sensor == moistureZoneTwoDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
             total += averagedValues->moistureZoneTwo[i];
         }
     }
-    return (total/NUM_SAMPLES_TO_AVERAGE);
+    return (total / NUM_SAMPLES_TO_AVERAGE);
 }
 
-int storeSensorReadings(Values* averagedValues, int sensor, int i){
-    if(sensor == lightDex){
+int storeSensorReadings(Values* averagedValues, int sensor, int i)
+{
+    if (sensor == lightDex)
+    {
         averagedValues->light[i] = ADCResult;
     }
-    else if(sensor == tempZoneOneDex){
+    else if (sensor == tempZoneOneDex)
+    {
         averagedValues->tempZoneOne[i] = ADCResult;
     }
-    else if(sensor == tempZoneTwoDex){
+    else if (sensor == tempZoneTwoDex)
+    {
         averagedValues->tempZoneTwo[i] = ADCResult;
     }
-    else if(sensor == moistureZoneOneDex){
+    else if (sensor == moistureZoneOneDex)
+    {
         averagedValues->moistureZoneOne[i] = ADCResult;
     }
-    else if(sensor == moistureZoneTwoDex){
+    else if (sensor == moistureZoneTwoDex)
+    {
         averagedValues->moistureZoneTwo[i] = ADCResult;
     }
     return 1;
@@ -91,7 +106,7 @@ void main(void)
     char buttonState = 0; //Current button press state (to allow edge detection)
     int muxState = 0;
     int displayDur = 0;
-
+    servo = irri1;
     /*
      * Functions with two underscores in front are called compiler intrinsics.
      * They are documented in the compiler user guide, not the IDE or MCU guides.
@@ -130,17 +145,20 @@ void main(void)
 
     // preloop to get some average values
     int i = 0;
-    for (i = 0; i< NUM_SAMPLES_TO_AVERAGE; i++){
+    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+    {
         delay(WAIT_TIMER);
         int sensor = NUM_SENSORS;
-        for(sensor = 0; sensor< NUM_SENSORS; sensor++){
+        for (sensor = 0; sensor < NUM_SENSORS; sensor++)
+        {
             setMux(sensor);
             delay(50);
             storeSensorReadings(averagedValues, sensor, i);
         }
     }
 
-    while (1){
+    while (1)
+    {
         // toggle the display for each zone
         //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
@@ -152,10 +170,9 @@ void main(void)
 
         }
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
-                & (buttonState == 1)) //Look for falling edge
+        & (buttonState == 1)) //Look for falling edge
         {
             output_pwm_on();
-//            Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
             buttonState = 0;                          //Capture new button state
             // --------------------------------
             muxState = (muxState + 1) % 5;
@@ -166,12 +183,11 @@ void main(void)
 
         // process readings
 
-
-
         //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
         if (ADCState == 0)
         {
-            if (displayDur == 0){
+            if (displayDur == 0)
+            {
                 showHex((int) ADCResult); //Put the previous result on the LCD display
                 displayDur = 1500;
             }
@@ -482,14 +498,15 @@ void ADC_ISR(void)
     }
 }
 
-int delay(int n){
+int delay(int n)
+{
     int i = 0;
-    for (i=0;i<n;i++){
-        i+=1;
-        i-=1;
+    for (i = 0; i < n; i++)
+    {
+        i += 1;
+        i -= 1;
     }
 }
-
 
 int setMux(int n)
 {
@@ -544,24 +561,63 @@ int setMux(int n)
     return 0;
 }
 
-void output_pwm_off(){
-    param.clockSource           = TIMER_A_CLOCKSOURCE_SMCLK;
-    param.clockSourceDivider    = TIMER_A_CLOCKSOURCE_DIVIDER_1;
-    param.timerPeriod           = TIMER_A_PERIOD; //Defined in main.h
-    param.compareRegister       = TIMER_A_CAPTURECOMPARE_REGISTER_1;
-    param.compareOutputMode     = TIMER_A_OUTPUTMODE_RESET_SET;
-    param.dutyCycle             = HIGH_COUNT_OFF; //Defined in main.h
+void output_pwm_off()
+{
+    param.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+    param.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod = TIMER_A_PERIOD; //Defined in main.h
+    param.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    param.compareOutputMode = TIMER_A_OUTPUTMODE_RESET_SET;
+    param.dutyCycle = HIGH_COUNT_OFF; //Defined in main.h
 
     Timer_A_outputPWM(TIMER_A0_BASE, &param);
 }
 
-void output_pwm_on(){
-    param.clockSource           = TIMER_A_CLOCKSOURCE_SMCLK;
-    param.clockSourceDivider    = TIMER_A_CLOCKSOURCE_DIVIDER_1;
-    param.timerPeriod           = TIMER_A_PERIOD; //Defined in main.h
-    param.compareRegister       = TIMER_A_CAPTURECOMPARE_REGISTER_1;
-    param.compareOutputMode     = TIMER_A_OUTPUTMODE_RESET_SET;
-    param.dutyCycle             = HIGH_COUNT_ON; //Defined in main.h
+void output_pwm_on()
+{
+    param.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+    param.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod = TIMER_A_PERIOD; //Defined in main.h
+    param.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    param.compareOutputMode = TIMER_A_OUTPUTMODE_RESET_SET;
+    param.dutyCycle = HIGH_COUNT_ON; //Defined in main.h
 
     Timer_A_outputPWM(TIMER_A0_BASE, &param);
 }
+
+void output_pwm_idle()
+{
+    param.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+    param.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod = TIMER_A_PERIOD; //Defined in main.h
+    param.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    param.compareOutputMode = TIMER_A_OUTPUTMODE_RESET_SET;
+    param.dutyCycle = 0; //Defined in main.h
+
+    Timer_A_outputPWM(TIMER_A0_BASE, &param);
+}
+
+void select_pwm_target(int selected)
+{
+    switch (selected)
+    {
+    case irri1:
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN6);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN0);
+        break;
+    case irri2:
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
+        GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN0);
+        break;
+    case vent1:
+        GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN6);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN0);
+        break;
+    case vent2:
+        GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
+        GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN0);
+        break;
+    }
+    return;
+}
+

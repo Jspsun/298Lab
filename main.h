@@ -33,6 +33,7 @@ void Init_Clock(void);
 void Init_UART(void);
 void Init_PWM(void);
 void Init_ADC(void);
+enum Servo {irri1 = 0, irri2 = 1, vent1 = 2, vent2 = 3};
 
 Timer_A_outputPWMParam param; //Timer configuration data structure for PWM
 
