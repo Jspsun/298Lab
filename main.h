@@ -5,8 +5,8 @@
 
 #define TIMER_A_PERIOD  20000 //T = 1/f = (TIMER_A_PERIOD * 1 us)
 // HITH COUNT/ DUTY CYCLE btw 1000 ~ 2000
-#define HIGH_COUNT      1000  //Number of cycles signal is high (Duty Cycle = HIGH_COUNT / TIMER_A_PERIOD)
-
+#define HIGH_COUNT_ON      1000                                                           //Number of cycles signal is high (Duty Cycle = HIGH_COUNT / TIMER_A_PERIOD)
+#define HIGH_COUNT_OFF     2000
 //Output pin to buzzer
 #define PWM_PORT        GPIO_PORT_P1
 #define PWM_PIN         GPIO_PIN7

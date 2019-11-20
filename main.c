@@ -543,3 +543,24 @@ int setMux(int n)
     return 0;
 }
 
+void output_pwm_off(){
+    param.clockSource           = TIMER_A_CLOCKSOURCE_SMCLK;
+    param.clockSourceDivider    = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod           = TIMER_A_PERIOD; //Defined in main.h
+    param.compareRegister       = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    param.compareOutputMode     = TIMER_A_OUTPUTMODE_RESET_SET;
+    param.dutyCycle             = HIGH_COUNT_OFF; //Defined in main.h
+
+    Timer_A_outputPWM(TIMER_A0_BASE, &param);
+}
+
+void output_pwm_on(){
+    param.clockSource           = TIMER_A_CLOCKSOURCE_SMCLK;
+    param.clockSourceDivider    = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+    param.timerPeriod           = TIMER_A_PERIOD; //Defined in main.h
+    param.compareRegister       = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    param.compareOutputMode     = TIMER_A_OUTPUTMODE_RESET_SET;
+    param.dutyCycle             = HIGH_COUNT_ON; //Defined in main.h
+
+    Timer_A_outputPWM(TIMER_A0_BASE, &param);
+}
