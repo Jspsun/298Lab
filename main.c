@@ -3,22 +3,86 @@
 #include "hal_LCD.h"
 #include <stdio.h>
 
-/*
- * This project contains some code samples that may be useful.
- *
- */
+#define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
+
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
+int WAIT_TIMER = 900; //TODO: fine tune this number
+int NUM_SENSORS = 5;
 
+
+
+typedef struct{
+    float light[NUM_SAMPLES_TO_AVERAGE];
+    float tempZoneOne[NUM_SAMPLES_TO_AVERAGE];
+    float tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
+    float moistureZoneOne[NUM_SAMPLES_TO_AVERAGE];
+    float moistureZoneTwo[NUM_SAMPLES_TO_AVERAGE];
+} values;
+
+int delay(int n);
 int setMux(int n);
+int storeSensorReadings(values* averagedValues, int sensor);
+float getAverageSensorReading(values* averagedValues, int sensor);
+
+float getAverageSensorReading(values* averagedValues, int sensor){
+    int i = 0;
+    float total = 0.0;
+    if(sensor == 0){
+        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+            total += averagedValues->light[i];
+        }
+    }
+    else if(sensor == 1){
+       for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+           total += averagedValues->tempZoneOne[i];
+       }
+    }
+    else if(sensor == 2){
+        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+            total += averagedValues->tempZoneTwo[i];
+        }
+    }
+    else if(sensor == 3){
+        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+            total += averagedValues->moistureZoneOne[i];
+        }
+    }
+    else if(sensor == 4){
+        for (i == 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+            total += averagedValues->moistureZoneTwo[i];
+        }
+    }
+    return (total/NUM_SAMPLES_TO_AVERAGE)
+}
+
+int storeSensorReadings(values* averagedValues, int sensor){
+    if(sensor == 0){
+        averagedValues->light[i] = ADCResult;
+    }
+    else if(sensor == 1){
+        averagedValues->tempZoneOne[i] = ADCResult;
+    }
+    else if(sensor == 2){
+        averagedValues->tempZoneTwo[i] = ADCResult;
+    }
+    else if(sensor == 3){
+        averagedValues->moistureZoneOne[i] = ADCResult;
+    }
+    else if(sensor == 4){
+        averagedValues->moistureZoneTwo[i] = ADCResult;
+    }
+}
 
 void main(void)
 {
+    values *averagedValues = malloc(sizeof(values));
+
     char buttonState = 0; //Current button press state (to allow edge detection)
-    int muxToggle = 0;
+    int muxState = 0;
     int displayDur = 0;
-    setMux(muxToggle);
+    setMux(muxState);
 
     /*
      * Functions with two underscores in front are called compiler intrinsics.
@@ -58,7 +122,20 @@ void main(void)
 
     displayScrollText("ECE 298");
 
-    // preloop
+    // preloop to get some average values
+    int i = 0;
+    for (i = 0; i< NUM_SAMPLES_TO_AVERAGE; i++){
+        delay(WAIT_TIMER);
+        int sensor = NUM_SENSORS;
+        for(sensor = 0; sensor< NUM_SENSORS; sensor++){
+            setMux(sensor);
+            delay(50);
+
+            storeSensorReadings(averagedValues, sensor);
+            float val = getAverageSensorReading(averagedValues, sensor);
+
+        }
+    }
 
     while (1) //Do this when you want an infinite loop of code
     {
@@ -70,19 +147,21 @@ void main(void)
             buttonState = 1;                //Capture new button state
 
         }
-        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0)
+        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
                 & (buttonState == 1)) //Look for falling edge
         {
             Timer_A_outputPWM(TIMER_A0_BASE, &param);   //Turn on PWM
             buttonState = 0;                          //Capture new button state
             // --------------------------------
-            muxToggle = (muxToggle + 1) % 3;
-            setMux(muxToggle); // set GPIO pins to value of mux toggle
+            muxState = (muxState + 1) % 3;
+            setMux(muxState); // set GPIO pins to value of mux toggle
             displayDur = 0; // force re-set of lcd display
 
-
-
         }
+
+        // process readings
+
+
 
         //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
         if (ADCState == 0)
@@ -397,6 +476,15 @@ void ADC_ISR(void)
         ADCResult = ADC_getResults(ADC_BASE);
     }
 }
+
+int delay(int n){
+    int i = 0;
+    for (i=0;i<n;i++){
+        i+=1;
+        i-=1;
+    }
+}
+
 
 int setMux(int n)
 {
