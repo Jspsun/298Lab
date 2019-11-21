@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
-#define lightDex 4
+#define lightDex 0
 #define tempZoneOneDex 1
-#define tempZoneTwoDex 3
-#define moistureZoneOneDex 2
-#define moistureZoneTwoDex 0
+#define tempZoneTwoDex 2
+#define moistureZoneOneDex 3
+#define moistureZoneTwoDex 4
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
@@ -155,9 +155,8 @@ void main(void)
             delay(50);
             storeSensorReadings(averagedValues, sensor, i);
         }
-   }
+    }
 
-    setMux(0);
     while (1)
     {
         // toggle the display for each zone
@@ -182,20 +181,20 @@ void main(void)
 
         }
 
+
+
         // process readings
 
         //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
-        if (ADCState == 0)
+        read_adc();
+
+
+        if (displayDur == 0)
         {
-            if (displayDur == 0)
-            {
-                showHex((int) ADCResult); //Put the previous result on the LCD display
-                displayDur = 1500;
-            }
-            displayDur -= 1;
-            ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
-            ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
+            showHex((int) ADCResult); //Put the previous result on the LCD display
+            displayDur = 1500;
         }
+        displayDur -= 1;
 
         /*
          * You can use the following code if you plan on only using interrupts
@@ -507,6 +506,7 @@ int delay(int n)
         i += 1;
         i -= 1;
     }
+    //TODO: Return smthing if its signiture calls for it.
 }
 
 int setMux(int n)
@@ -666,7 +666,16 @@ void set_led_ind(int selected, int state)
             GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
         }
         break;
-        break;
     }
     return;
+}
+
+
+
+void read_adc(){
+    if (ADCState == 0)
+            {
+                ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
+                ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
+            }
 }

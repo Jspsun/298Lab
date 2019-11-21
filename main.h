@@ -27,12 +27,13 @@
 #define ADC_IN_PIN      GPIO_PIN1
 #define ADC_IN_CHANNEL  ADC_INPUT_A9
 void output_pwm_off();
-void output_pwm_off();
+void output_pwm_on();
 void Init_GPIO(void);
 void Init_Clock(void);
 void Init_UART(void);
 void Init_PWM(void);
 void Init_ADC(void);
+void read_adc();
 enum Servo {irri1 = 0, irri2 = 1, vent1 = 2, vent2 = 3};
 
 Timer_A_outputPWMParam param; //Timer configuration data structure for PWM
