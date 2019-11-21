@@ -622,3 +622,51 @@ void select_pwm_target(int selected)
     return;
 }
 
+void set_led_ind(int selected, int state)
+{
+    switch (selected)
+    {
+    case irri1:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN2);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN2);
+        }
+        break;
+    case irri2:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN3);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN3);
+        }
+        break;
+    case vent1:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        }
+        break;
+    case vent2:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        }
+        break;
+        break;
+    }
+    return;
+}
