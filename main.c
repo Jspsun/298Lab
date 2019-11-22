@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
-#define lightDex 0
+#define lightDex 4
 #define tempZoneOneDex 1
-#define tempZoneTwoDex 2
-#define moistureZoneOneDex 3
-#define moistureZoneTwoDex 4
+#define tempZoneTwoDex 3
+#define moistureZoneOneDex 2
+#define moistureZoneTwoDex 0
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
@@ -37,10 +37,6 @@ void main(void){
 
     initAll();
 
-
-    char buttonState = 0; //Current button press state (to allow edge detection)
-    int muxState = 0;
-    int displayDur = 0;
     servo = irri1;
     averagedValues = malloc(sizeof(Values));
 
@@ -52,7 +48,6 @@ void main(void){
         averagedValues->moistureZoneOne[q]=9;
         averagedValues->moistureZoneTwo[q]=9;
     }
-
 
     // preloop to get some average values
     int i;
@@ -66,7 +61,54 @@ void main(void){
             __delay_cycles(10000);
         }
     }
+    int counter = -1;
+
+    int displayDur=0;
+    int muxState = 0;
+    int buttonState = 0;
+    setMux(0);
     while (1){
+//        counter +=1;
+//        int sensor = (counter%NUM_SENSORS);
+//        setMux(sensor);
+//        __delay_cycles(10000);
+//        storeSensorReadings(sensor, i);
+//
+//        __delay_cycles(100000);
+        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
+                        & (buttonState == 0)) //Look for rising edge
+                {
+                    output_pwm_off();
+
+                    buttonState = 1;                //Capture new button state
+
+                }
+                if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
+                & (buttonState == 1)) //Look for falling edge
+                {
+                    output_pwm_on();
+                    buttonState = 0;                          //Capture new button state
+                    // --------------------------------
+                    muxState = (muxState + 1) % 5;
+                    setMux(muxState); // set GPIO pins to value of mux toggle
+                    displayDur = 0; // force re-set of lcd display
+
+                }
+
+
+
+                // process readings
+
+                //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
+                read_adc();
+
+
+                if (displayDur == 0)
+                {
+                    showHex((int) ADCResult); //Put the previous result on the LCD display
+                    displayDur = 1500;
+                }
+                displayDur -= 1;
 
     }
 }
