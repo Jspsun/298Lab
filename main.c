@@ -23,7 +23,7 @@ enum Servo servo;
 unsigned int isOver;
 
 int irrigationThresh = 10;
-int ventThresh = 22;
+int ventThresh = 24;
 int lightVal;
 
 typedef struct
@@ -102,7 +102,7 @@ void main(void)
     setMux(0);
 
 
-    select_pwm_target(irri1);
+    select_pwm_target(irri2);
         output_pwm_on();
         __delay_cycles(100000);
         output_pwm_idle();
@@ -119,7 +119,7 @@ void main(void)
 
 
 
-        select_pwm_target(irri1);
+        select_pwm_target(irri2);
         output_pwm_off();
         __delay_cycles(100000);
         output_pwm_idle();
@@ -222,6 +222,12 @@ void main(void)
         servoStates[vent2] = ventZone2 && isDay;
 
         update_servos();
+
+
+        //------------------------------------
+
+//        if (uartReceived)                       /* UART communication */
+//                uartTransmit();
     }
 }
 void Init_GPIO(void)
