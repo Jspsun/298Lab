@@ -13,7 +13,7 @@
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
-int WAIT_TIMER = 900; //TODO: fine tune this number
+int WAIT_TIMER = 50000; //TODO: fine tune this number
 int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
 enum Servo servo;
@@ -32,8 +32,7 @@ int setMux(int n);
 int storeSensorReadings(Values* averagedValues, int sensor, int i);
 float getAverageSensorReading(Values* averagedValues, int sensor);
 
-float getAverageSensorReading(Values* averagedValues, int sensor)
-{
+float getAverageSensorReading(Values* averagedValues, int sensor){
     int i = 0;
     float total = 0.0;
     if (sensor == lightDex)
@@ -76,6 +75,7 @@ float getAverageSensorReading(Values* averagedValues, int sensor)
 
 int storeSensorReadings(Values* averagedValues, int sensor, int i)
 {
+    read_adc();
     if (sensor == lightDex)
     {
         averagedValues->light[i] = ADCResult;
@@ -152,7 +152,7 @@ void main(void)
         for (sensor = 0; sensor < NUM_SENSORS; sensor++)
         {
             setMux(sensor);
-            delay(50);
+            delay(1000);
             storeSensorReadings(averagedValues, sensor, i);
         }
     }
@@ -506,7 +506,7 @@ int delay(int n)
         i += 1;
         i -= 1;
     }
-    //TODO: Return smthing if its signiture calls for it.
+    return 1;
 }
 
 int setMux(int n)
@@ -673,9 +673,8 @@ void set_led_ind(int selected, int state)
 
 
 void read_adc(){
-    if (ADCState == 0)
-            {
-                ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
-                ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
-            }
+    if (ADCState == 0) {
+        ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
+        ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
+    }
 }
