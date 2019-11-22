@@ -49,6 +49,7 @@ main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/l
 main.obj: ../hal_LCD.h
 main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h
 main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdarg.h
+main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/string.h
 
 ../main.c: 
 ../main.h: 
@@ -99,3 +100,4 @@ main.obj: /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/s
 ../hal_LCD.h: 
 /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdio.h: 
 /Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/stdarg.h: 
+/Users/jonathan/ccs/tools/compiler/ti-cgt-msp430_18.12.2.LTS/include/string.h: 

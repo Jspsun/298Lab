@@ -4,6 +4,7 @@
 #include "hal_LCD.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
 #define lightDex 4
@@ -11,6 +12,7 @@
 #define tempZoneTwoDex 3
 #define moistureZoneOneDex 2
 #define moistureZoneTwoDex 0
+#define cliBufferSize 15
 
 #define zone1 0
 #define zone2 1
@@ -21,9 +23,9 @@ int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
 enum Servo servo;
 unsigned int isOver;
+static uint8_t cliIndex = 0;
+static uint8_t cliBuffer[cliBufferSize];
 
-int irrigationThresh = 10;
-int ventThresh = 24;
 int lightVal;
 
 typedef struct
@@ -43,11 +45,18 @@ int isDaytime();
 void zone_select(void);
 void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil);
 void set_led_ind(int selected, int state);
+void uartTransmit(void);
+void uartDisplay(uint8_t *sendText, uint8_t length);
 
+static _Bool uartReceived = false;
 volatile static _Bool buttonPress = false; /* zone select button state */
 static _Bool zone = zone1; /* zone 1 or zone 2 */
 static uint8_t temp[2] = { 0, 0 }; /* temperature values */
 static uint8_t soil[2] = { 0, 0 }; /* soil values */
+
+static uint8_t temp_threshold[2] = {24, 24};               /* temperature motors threshold */
+static uint8_t soil_threshold[2] = {10, 10};               /* soil motors thresholds */
+
 
 
 static uint8_t servoStates[4] = { 0, 0, 0, 0}; /* soil values */
@@ -194,15 +203,15 @@ void main(void)
 
         if (isDay)
         { // ventilation
-            ventZone1 = (getAverageSensorReading(tempZoneOneDex) > ventThresh);
-            ventZone2 = (getAverageSensorReading(tempZoneTwoDex) > ventThresh);
+            ventZone1 = (getAverageSensorReading(tempZoneOneDex) > temp_threshold[0]);
+            ventZone2 = (getAverageSensorReading(tempZoneTwoDex) > temp_threshold[1]);
         }
         else
         { // irrigation
             irrZone1 = (getAverageSensorReading(moistureZoneOneDex)
-                    < irrigationThresh);
+                    < soil_threshold[0]);
             irrZone2 = (getAverageSensorReading(moistureZoneTwoDex)
-                    < irrigationThresh);
+                    < soil_threshold[1]);
         }
 
 
@@ -226,8 +235,10 @@ void main(void)
 
         //------------------------------------
 
-//        if (uartReceived)                       /* UART communication */
-//                uartTransmit();
+        if (uartReceived){
+            uartTransmit();
+        }
+
     }
 }
 void Init_GPIO(void)
@@ -407,16 +418,36 @@ void Init_UART(void)
 __interrupt
 void EUSCIA0_ISR(void)
 {
-    uint8_t RxStatus = EUSCI_A_UART_getInterruptStatus(
-            EUSCI_A0_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT_FLAG);
+    uint8_t RxStatus = EUSCI_A_UART_getInterruptStatus(EUSCI_A0_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT_FLAG);
+        EUSCI_A_UART_clearInterrupt(EUSCI_A0_BASE, RxStatus);
+        uint8_t received_data = EUSCI_A_UART_receiveData(EUSCI_A0_BASE);
 
-    EUSCI_A_UART_clearInterrupt(EUSCI_A0_BASE, RxStatus);
+        if ((RxStatus) && !((received_data == 0x7F) && (cliIndex == 0))) /* received correct package, and not a backspace in the begining */
+        {
+            EUSCI_A_UART_transmitData(EUSCI_A0_BASE, received_data); /* echo */
+        }
 
-    if (RxStatus)
-    {
-        EUSCI_A_UART_transmitData(EUSCI_A0_BASE,
-                                  EUSCI_A_UART_receiveData(EUSCI_A0_BASE));
-    }
+       if (received_data == '\r') /* enter key */
+            uartReceived = true;
+
+       else if (received_data == 0x7F) /* backspace key */
+       {
+           if (cliIndex > 0) /* if buffer not empty */
+           {
+               cliIndex--;
+               if (cliIndex < cliBufferSize) /* within buffer range */
+                   cliBuffer[cliIndex] = 0; /* remove last char from buffer */
+           }
+       }
+
+       else if (cliIndex < cliBufferSize) /* other keys */
+       {
+           if ((isalpha(tolower(received_data))) || (isdigit(received_data)) || (received_data == ' ') || (received_data == '?')) /* legal keys */
+               cliBuffer[cliIndex] = tolower(received_data); /* store key */
+           cliIndex++;
+       }
+       else
+           cliIndex++;
 }
 
 /* PWM Initialization */
@@ -856,6 +887,176 @@ void update_servos(){
             output_pwm_idle();
             __delay_cycles(100000);
         }
+    }
+}
+
+
+/* UART communication */
+void uartTransmit(void)
+{
+    uartReceived = false;
+    uint8_t txMsg[100]; /* UART TX message */
+
+    int i;
+    for (i = 0 ; i < 50 ; i++) /* initialize txMsg buffer */
+        txMsg[i] = 0;
+
+    if (! strcmp((char*)cliBuffer, "")) /* enter key*/
+    {
+        strcpy((char*) txMsg, "> "); /* prompt */
+        uartDisplay(txMsg, strlen((char*) txMsg));
+    }
+
+
+    else if ((cliBuffer[0] == 's') && (cliBuffer[1] == 'e') && (cliBuffer[2] == 't')) /* threshold set */
+    {
+        int newThreshold = -1;
+        if (isdigit(cliBuffer[9])) /* 3 digit value */
+            newThreshold = (cliBuffer[7] - 48)*100 + (cliBuffer[8] - 48)*10 + (cliBuffer[9] - 48);
+        else if (isdigit(cliBuffer[8])) /* 2 digit value */
+            newThreshold = (cliBuffer[7] - 48)*10 + (cliBuffer[8] - 48);
+        else if (isdigit(cliBuffer[7])) /* 1 digit value */
+            newThreshold = (cliBuffer[7] - 48);
+
+        if ((newThreshold >= 0) && (newThreshold <= 100)) /* threshold is a valid value */
+        {
+            if ((cliBuffer[4] == 't') && (cliBuffer[5] == '1')) /*temp1 threshold */
+            {
+                temp_threshold[0] = newThreshold;
+                strcpy((char*) txMsg, "The new threshold for temperature motor 1 was set");
+                uartDisplay(txMsg, strlen((char*) txMsg));
+            }
+            else if ((cliBuffer[4] == 's') && (cliBuffer[5] == '1')) /*soil1 threshold */
+            {
+                soil_threshold[0] = newThreshold;
+                strcpy((char*) txMsg, "The new threshold for soil motor 1 was set");
+                uartDisplay(txMsg, strlen((char*) txMsg));
+            }
+            else if ((cliBuffer[4] == 't') && (cliBuffer[5] == '2')) /*temp2 threshold */
+            {
+                temp_threshold[1] = newThreshold;
+                strcpy((char*) txMsg, "The new threshold for temperature motor 2 was set");
+                uartDisplay(txMsg, strlen((char*) txMsg));
+            }
+            else if ((cliBuffer[4] == 's') && (cliBuffer[5] == '2')) /* soil2 threshold */
+            {
+                soil_threshold[1] = newThreshold;
+                strcpy((char*) txMsg, "The new threshold for soil motor 2 was set");
+                uartDisplay(txMsg, strlen((char*) txMsg));
+            }
+            else /* threshold set error*/
+            {
+                strcpy((char*) txMsg, "ERROR: Invalid threshold!");
+                uartDisplay(txMsg, strlen((char*) txMsg));
+            }
+        }
+        else /* threshold set error*/
+        {
+            strcpy((char*) txMsg, "ERROR: Invalid threshold!");
+            uartDisplay(txMsg, strlen((char*) txMsg));
+        }
+    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor t1 on")) /* enable temperature motor 1 */
+//    {
+//        motorEnable[0] = true;
+//        strcpy((char*) txMsg, "Temperature motor 1 is enabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR T1 ENABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor t1 off")) /* disable temperature motor 1 */
+//    {
+//        motorEnable[0] = false;
+//        strcpy((char*) txMsg, "Temperature motor 1 is disabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR T1 DISABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor s1 on")) /* enable soil motor 1 */
+//    {
+//        motorEnable[1] = true;
+//        strcpy((char*) txMsg, "Soil motor 1 is enabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR S1 ENABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor s1 off")) /* disable soil motor 1 */
+//    {
+//        motorEnable[1] = false;
+//        strcpy((char*) txMsg, "Soil motor 1 is disabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR S1 DISABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor t2 on")) /* enable temperature motor 2 */
+//    {
+//        motorEnable[2] = true;
+//        strcpy((char*) txMsg, "Temperature motor 2 is enabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR T2 ENABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor t2 off")) /* disable temperature motor 2 */
+//    {
+//        motorEnable[2] = false;
+//        strcpy((char*) txMsg, "Temperature motor 2 is disabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR T2 DISABLED");
+//    }
+//
+//    else if (! strcmp((char*)cliBuffer, "motor s2 on")) /* enable soil motor 2 */
+//    {
+//        motorEnable[3] = true;
+//        strcpy((char*) txMsg, "Soil motor 2 is enabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR S2 ENABLED");
+//    }
+//    else if (! strcmp((char*)cliBuffer, "motor s2 off")) /* disable soil motor 2 */
+//    {
+//        motorEnable[3] = false;
+//        strcpy((char*) txMsg, "Soil motor 2 is disabled");
+//        uartDisplay(txMsg, strlen((char*) txMsg));
+//        displayScrollText("MOTOR S2 DISABLED");
+//    }
+
+    else
+    {
+        strcpy((char*) txMsg, "ERROR: Invalid command!"); /* error */
+        uartDisplay(txMsg, strlen((char*) txMsg));
+    }
+
+    cliIndex = 0;
+    for (i = 0 ; i < cliBufferSize ; i++) /* clear receive buffer */
+        cliBuffer[i] = 0;
+}
+
+/* Tx to UART */
+void uartDisplay(uint8_t *sendText, uint8_t length)
+{
+    EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 13); /* send carrier return*/
+    while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+    EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 10); /* send new line*/
+    while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+
+    int i;
+    for (i = 0 ; i < length ; i++)
+    {
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, sendText[i]); /* send message */
+        while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+    }
+
+    if ((sendText[0] != '>') && (sendText[0] != '#') && (sendText[0] != ' ')) /* if not enter key or welcome message, it was command, make new line */
+    {
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 13); /* send carrier return*/
+        while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 10); /* send new line*/
+        while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 10); /* send new line*/
+        while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, '>'); /* send new prompt */
+        while(EUSCI_A_UART_queryStatusFlags(EUSCI_A0_BASE, EUSCI_A_UART_BUSY)) {} /* wait for UART to be free - stop busy */
+        EUSCI_A_UART_transmitData(EUSCI_A0_BASE, 32); /* send space*/
     }
 }
 
