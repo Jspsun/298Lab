@@ -122,8 +122,15 @@ void main(void){
             counter = 0;
         }
         // -----------------------------------------------------------
+        // show zones
         zone_select();
+
+        temp[0]= getAverageSensorReading(tempZoneOneDex);
+        temp[1]= getAverageSensorReading(tempZoneTwoDex);
+        soil[0]= getAverageSensorReading(moistureZoneOneDex);
+        soil[1]= getAverageSensorReading(moistureZoneTwoDex);
         displayLCD(zone, temp, soil);           /* display results */
+        // -----------------------------------------------------------
 
     }
 }
