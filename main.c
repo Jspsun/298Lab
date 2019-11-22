@@ -13,152 +13,57 @@
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
-int WAIT_TIMER = 50000; //TODO: fine tune this number
 int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
 enum Servo servo;
 
-typedef struct
-{
-    float light[NUM_SAMPLES_TO_AVERAGE];
-    float tempZoneOne[NUM_SAMPLES_TO_AVERAGE];
-    float tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
-    float moistureZoneOne[NUM_SAMPLES_TO_AVERAGE];
-    float moistureZoneTwo[NUM_SAMPLES_TO_AVERAGE];
+typedef struct {
+    int16_t light[NUM_SAMPLES_TO_AVERAGE];
+    int16_t tempZoneOne[NUM_SAMPLES_TO_AVERAGE];
+    int16_t tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
+    int16_t moistureZoneOne[NUM_SAMPLES_TO_AVERAGE];
+    int16_t moistureZoneTwo[NUM_SAMPLES_TO_AVERAGE];
 } Values;
 
-int delay(int n);
 int setMux(int n);
-int storeSensorReadings(Values* averagedValues, int sensor, int i);
-float getAverageSensorReading(Values* averagedValues, int sensor);
+int storeSensorReadings(Values *averagedValues, int sensor, int i);
+float getAverageSensorReading(Values *averagedValues, int sensor);
+void initAll(void);
 
-float getAverageSensorReading(Values* averagedValues, int sensor){
-    int i = 0;
-    float total = 0.0;
-    if (sensor == lightDex)
-    {
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-        {
-            total += averagedValues->light[i];
-        }
-    }
-    else if (sensor == tempZoneOneDex)
-    {
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-        {
-            total += averagedValues->tempZoneOne[i];
-        }
-    }
-    else if (sensor == tempZoneTwoDex)
-    {
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-        {
-            total += averagedValues->tempZoneTwo[i];
-        }
-    }
-    else if (sensor == moistureZoneOneDex)
-    {
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-        {
-            total += averagedValues->moistureZoneOne[i];
-        }
-    }
-    else if (sensor == moistureZoneTwoDex)
-    {
-        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-        {
-            total += averagedValues->moistureZoneTwo[i];
-        }
-    }
-    return (total / NUM_SAMPLES_TO_AVERAGE);
-}
+void main(void){
 
-int storeSensorReadings(Values* averagedValues, int sensor, int i)
-{
-    read_adc();
-    if (sensor == lightDex)
-    {
-        averagedValues->light[i] = ADCResult;
-    }
-    else if (sensor == tempZoneOneDex)
-    {
-        averagedValues->tempZoneOne[i] = ADCResult;
-    }
-    else if (sensor == tempZoneTwoDex)
-    {
-        averagedValues->tempZoneTwo[i] = ADCResult;
-    }
-    else if (sensor == moistureZoneOneDex)
-    {
-        averagedValues->moistureZoneOne[i] = ADCResult;
-    }
-    else if (sensor == moistureZoneTwoDex)
-    {
-        averagedValues->moistureZoneTwo[i] = ADCResult;
-    }
-    return 1;
-}
 
-void main(void)
-{
-    Values* averagedValues = malloc(sizeof(Values));
+    initAll();
+
 
     char buttonState = 0; //Current button press state (to allow edge detection)
     int muxState = 0;
     int displayDur = 0;
     servo = irri1;
-    /*
-     * Functions with two underscores in front are called compiler intrinsics.
-     * They are documented in the compiler user guide, not the IDE or MCU guides.
-     * They are a shortcut to insert some assembly code that is not really
-     * expressible in plain C/C++. Google "MSP430 Optimizing C/C++ Compiler
-     * v18.12.0.LTS" and search for the word "intrinsic" if you want to know
-     * more.
-     * */
 
-    //Turn off interrupts during initialization
-    __disable_interrupt();
-
-    //Stop watchdog timer unless you plan on using it
-    WDT_A_hold(WDT_A_BASE);
-
-    // Initializations - see functions for more detail
-    Init_GPIO();    //Sets all pins to output low as a default
-    Init_PWM();     //Sets up a PWM output
-    Init_ADC();     //Sets up the ADC to sample
-    Init_Clock();   //Sets up the necessary system clocks
-    Init_UART();    //Sets up an echo over a COM port
-    Init_LCD();     //Sets up the LaunchPad LCD display
-
-    /*
-     * The MSP430 MCUs have a variety of low power modes. They can be almost
-     * completely off and turn back on only when an interrupt occurs. You can
-     * look up the power modes in the Family User Guide under the Power Management
-     * Module (PMM) section. You can see the available API calls in the DriverLib
-     * user guide, or see "pmm.h" in the driverlib directory. Unless you
-     * purposefully want to play with the power modes, just leave this command in.
-     */
-    PMM_unlockLPM5(); //Disable the GPIO power-on default high-impedance mode to activate previously configured port settings
-
-    //All done initializations - turn interrupts back on.
-    __enable_interrupt();
-
-    // preloop to get some average values
-    int i = 0;
-    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
-    {
-        delay(WAIT_TIMER);
-        int sensor = NUM_SENSORS;
-        for (sensor = 0; sensor < NUM_SENSORS; sensor++)
-        {
-            setMux(sensor);
-            delay(1000);
-            storeSensorReadings(averagedValues, sensor, i);
-        }
+    int q;
+    for (q = 0; q < NUM_SAMPLES_TO_AVERAGE; q++){
+        averagedValues->light[q]=9;
+        averagedValues->tempZoneOne[q]=9;
+        averagedValues->tempZoneTwo[q]=9;
+        averagedValues->moistureZoneOne[q]=9;
+        averagedValues->moistureZoneTwo[q]=9;
     }
 
-    while (1)
-    {
+
+    // preloop to get some average values
+    int i;
+    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+        __delay_cycles(10000);
+        int sensor = NUM_SENSORS;
+        for (sensor = 0; sensor < NUM_SENSORS; sensor++){
+            setMux(sensor);
+            __delay_cycles(10000);
+            storeSensorReadings(averagedValues, sensor, i);
+            __delay_cycles(10000);
+        }
+    }
+    while (1){
         // toggle the display for each zone
         //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
         if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
@@ -498,15 +403,25 @@ void ADC_ISR(void)
     }
 }
 
-int delay(int n)
-{
-    int i = 0;
-    for (i = 0; i < n; i++)
-    {
-        i += 1;
-        i -= 1;
-    }
-    return 1;
+void initAll(void){
+    //Turn off interrupts during initialization
+    __disable_interrupt();
+
+    //Stop watchdog timer unless you plan on using it
+    WDT_A_hold(WDT_A_BASE);
+
+    // Initializations - see functions for more detail
+    Init_GPIO();    //Sets all pins to output low as a default
+    Init_PWM();     //Sets up a PWM output
+    Init_ADC();     //Sets up the ADC to sample
+    Init_Clock();   //Sets up the necessary system clocks
+    Init_UART();    //Sets up an echo over a COM port
+    Init_LCD();     //Sets up the LaunchPad LCD display
+
+    PMM_unlockLPM5(); //Disable the GPIO power-on default high-impedance mode to activate previously configured port settings
+
+    //All done initializations - turn interrupts back on.
+    __enable_interrupt();
 }
 
 int setMux(int n)
@@ -678,3 +593,72 @@ void read_adc(){
         ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
     }
 }
+
+
+float getAverageSensorReading(Values *averagedValues, int sensor){
+    int i = 0;
+    float total = 0.0;
+    if (sensor == lightDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->light[i];
+        }
+    }
+    else if (sensor == tempZoneOneDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->tempZoneOne[i];
+        }
+    }
+    else if (sensor == tempZoneTwoDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->tempZoneTwo[i];
+        }
+    }
+    else if (sensor == moistureZoneOneDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->moistureZoneOne[i];
+        }
+    }
+    else if (sensor == moistureZoneTwoDex)
+    {
+        for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+        {
+            total += averagedValues->moistureZoneTwo[i];
+        }
+    }
+    return (total / NUM_SAMPLES_TO_AVERAGE);
+}
+
+int storeSensorReadings(Values *averagedValues, int sensor, int i)
+{
+    read_adc();
+    if (sensor == lightDex)
+    {
+        averagedValues->light[i] = ADCResult;
+    }
+    else if (sensor == tempZoneOneDex)
+    {
+        averagedValues->tempZoneOne[i] = ADCResult;
+    }
+    else if (sensor == tempZoneTwoDex)
+    {
+        averagedValues->tempZoneTwo[i] = ADCResult;
+    }
+    else if (sensor == moistureZoneOneDex)
+    {
+        averagedValues->moistureZoneOne[i] = ADCResult;
+    }
+    else if (sensor == moistureZoneTwoDex)
+    {
+        averagedValues->moistureZoneTwo[i] = ADCResult;
+    }
+    return 1;
+}
+
