@@ -79,10 +79,6 @@ void main(void){
         }
     }
     int counter = -1;
-
-//    int displayDur=0;
-//    int muxState = 0;
-//    int buttonState = 0;
     setMux(0);
     while (1){
 
@@ -677,14 +673,16 @@ int storeSensorReadings(int sensor, int i)
     else if (sensor == moistureZoneOneDex)
     {
         // near 0 when not in water
-        // ~500-600 when in water
-        averagedValues->moistureZoneOne[i] = ADCResult/10;
+        // ~500-700 when in water
+        // displays as a percentage out of 700
+        averagedValues->moistureZoneOne[i] = ADCResult/7;
     }
     else if (sensor == moistureZoneTwoDex)
     {
         // near 0 when not in water
-        // ~500-600 when in water
-        averagedValues->moistureZoneTwo[i] = ADCResult/10;
+        // ~500-700 when in water
+        // displays as a percentage out of 700
+        averagedValues->moistureZoneTwo[i] = ADCResult/7;
     }
     return 1;
 }
