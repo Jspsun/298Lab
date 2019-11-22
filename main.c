@@ -20,6 +20,11 @@ int16_t ADCResult = 0; //Storage for the ADC conversion result
 int NUM_SENSORS = 5;
 int zoneToDisplay = 0;
 enum Servo servo;
+unsigned int isOver;
+
+int irrigationThresh=10;
+int ventThresh=22;
+int lightVal;
 
 typedef struct {
     int16_t light[NUM_SAMPLES_TO_AVERAGE];
@@ -33,9 +38,10 @@ int setMux(int n);
 int storeSensorReadings(int sensor, int i);
 int getAverageSensorReading(int sensor);
 void initAll(void);
-_Bool isDaytime();
+int isDaytime();
 void zone_select(void);
 void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil);
+void set_led_ind(int selected, int state);
 
 volatile static _Bool buttonPress = false;                  /* zone select button state */
 static _Bool zone = zone1;                                  /* zone 1 or zone 2 */
@@ -49,9 +55,12 @@ int tempZoneTwoDexData = 0;
 int moistureZoneOneDexData = 0;
 int moistureZoneTwoDexData = 0;
 
+int ventZone1;
+int ventZone2;
+int irrZone1;
+int irrZone2;
+
 void main(void){
-
-
     initAll();
 
     servo = irri1;
@@ -127,6 +136,27 @@ void main(void){
         soil[1]= getAverageSensorReading(moistureZoneTwoDex);
         displayLCD(zone, temp, soil);           /* display results */
         // -----------------------------------------------------------
+        // deal with leds
+
+        if(isDay){ // ventilation
+            ventZone1 = (getAverageSensorReading(tempZoneOneDex) > ventThresh);
+            ventZone2 = (getAverageSensorReading(tempZoneTwoDex) > ventThresh);
+        } else { // irrigation
+            irrZone1= (getAverageSensorReading(moistureZoneOneDex)<irrigationThresh);
+            irrZone2= (getAverageSensorReading(moistureZoneTwoDex)<irrigationThresh);
+        }
+        set_led_ind(irri1, irrZone1 && !isDay);
+
+//        if(irrZone1){
+//            select_pwm_target(irri1);
+//            output_pwm_on();
+//            __delay_cycles(100000);
+//        }
+
+        set_led_ind(irri2, irrZone2 && !isDay);
+        set_led_ind(vent1, ventZone1 && isDay);
+        set_led_ind(vent2, ventZone2 && isDay);
+        //--------------------------------------
 
     }
 }
@@ -554,56 +584,6 @@ void select_pwm_target(int selected)
     return;
 }
 
-void set_led_ind(int selected, int state)
-{
-    switch (selected)
-    {
-    case irri1:
-        if (state == 0)
-        {
-            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN2);
-        }
-        else
-        {
-            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN2);
-        }
-        break;
-    case irri2:
-        if (state == 0)
-        {
-            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN3);
-        }
-        else
-        {
-            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN3);
-        }
-        break;
-    case vent1:
-        if (state == 0)
-        {
-            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
-        }
-        else
-        {
-            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
-        }
-        break;
-    case vent2:
-        if (state == 0)
-        {
-            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
-        }
-        else
-        {
-            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
-        }
-        break;
-    }
-    return;
-}
-
-
-
 void read_adc(){
     if (ADCState == 0) {
         ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
@@ -687,15 +667,10 @@ int storeSensorReadings(int sensor, int i)
     return 1;
 }
 
-// TODO: this method seems bugged
-_Bool isDaytime(){
-    int lightVal = getAverageSensorReading(lightDex);
-
-    if(lightVal >= 700){
-        return true;
-    } else {
-        return false;
-    }
+int isDaytime(){
+    lightVal = getAverageSensorReading(lightDex);
+    isOver = lightVal > 700;
+    return isOver;
 }
 
 void zone_select(void)
@@ -740,5 +715,53 @@ void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil)
         showChar(((soil[1]/10)+'0'), pos5);
         showChar(((soil[1]%10)+'0'), pos6);
     }
+}
+
+void set_led_ind(int selected, int state)
+{
+    switch (selected)
+    {
+    case irri1:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN2);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN2);
+        }
+        break;
+    case irri2:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN3);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P5, GPIO_PIN3);
+        }
+        break;
+    case vent1:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN3);
+        }
+        break;
+    case vent2:
+        if (state == 0)
+        {
+            GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        }
+        else
+        {
+            GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN4);
+        }
+        break;
+    }
+    return;
 }
 
