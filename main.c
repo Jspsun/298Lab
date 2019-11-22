@@ -26,9 +26,11 @@ typedef struct {
 } Values;
 
 int setMux(int n);
-int storeSensorReadings(Values *averagedValues, int sensor, int i);
-float getAverageSensorReading(Values *averagedValues, int sensor);
+int storeSensorReadings(int sensor, int i);
+float getAverageSensorReading(int sensor);
 void initAll(void);
+
+Values *averagedValues;
 
 void main(void){
 
@@ -40,6 +42,7 @@ void main(void){
     int muxState = 0;
     int displayDur = 0;
     servo = irri1;
+    averagedValues = malloc(sizeof(Values));
 
     int q;
     for (q = 0; q < NUM_SAMPLES_TO_AVERAGE; q++){
@@ -59,57 +62,11 @@ void main(void){
         for (sensor = 0; sensor < NUM_SENSORS; sensor++){
             setMux(sensor);
             __delay_cycles(10000);
-            storeSensorReadings(averagedValues, sensor, i);
+            storeSensorReadings(sensor, i);
             __delay_cycles(10000);
         }
     }
     while (1){
-        // toggle the display for each zone
-        //Buttons SW1 and SW2 are active low (1 until pressed, then 0)
-        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
-                & (buttonState == 0)) //Look for rising edge
-        {
-            output_pwm_off();
-
-            buttonState = 1;                //Capture new button state
-
-        }
-        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
-        & (buttonState == 1)) //Look for falling edge
-        {
-            output_pwm_on();
-            buttonState = 0;                          //Capture new button state
-            // --------------------------------
-            muxState = (muxState + 1) % 5;
-            setMux(muxState); // set GPIO pins to value of mux toggle
-            displayDur = 0; // force re-set of lcd display
-
-        }
-
-
-
-        // process readings
-
-        //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
-        read_adc();
-
-
-        if (displayDur == 0)
-        {
-            showHex((int) ADCResult); //Put the previous result on the LCD display
-            displayDur = 1500;
-        }
-        displayDur -= 1;
-
-        /*
-         * You can use the following code if you plan on only using interrupts
-         * to handle all your system events since you don't need any infinite loop of code.
-         *
-         * //Enter LPM0 - interrupts only
-         * __bis_SR_register(LPM0_bits);
-         * //For debugger to let it know that you meant for there to be no more code
-         * __no_operation();
-         */
 
     }
 }
@@ -595,7 +552,7 @@ void read_adc(){
 }
 
 
-float getAverageSensorReading(Values *averagedValues, int sensor){
+float getAverageSensorReading(int sensor){
     int i = 0;
     float total = 0.0;
     if (sensor == lightDex)
@@ -636,7 +593,7 @@ float getAverageSensorReading(Values *averagedValues, int sensor){
     return (total / NUM_SAMPLES_TO_AVERAGE);
 }
 
-int storeSensorReadings(Values *averagedValues, int sensor, int i)
+int storeSensorReadings(int sensor, int i)
 {
     read_adc();
     if (sensor == lightDex)
