@@ -883,7 +883,7 @@ void update_servos(){
                 output_pwm_off();
 
             }
-            __delay_cycles(100000);
+            __delay_cycles(300000);
             output_pwm_idle();
             __delay_cycles(100000);
         }
