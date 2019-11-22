@@ -22,11 +22,12 @@ int zoneToDisplay = 0;
 enum Servo servo;
 unsigned int isOver;
 
-int irrigationThresh=10;
-int ventThresh=22;
+int irrigationThresh = 10;
+int ventThresh = 22;
 int lightVal;
 
-typedef struct {
+typedef struct
+{
     int16_t light[NUM_SAMPLES_TO_AVERAGE];
     int16_t tempZoneOne[NUM_SAMPLES_TO_AVERAGE];
     int16_t tempZoneTwo[NUM_SAMPLES_TO_AVERAGE];
@@ -43,10 +44,16 @@ void zone_select(void);
 void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil);
 void set_led_ind(int selected, int state);
 
-volatile static _Bool buttonPress = false;                  /* zone select button state */
-static _Bool zone = zone1;                                  /* zone 1 or zone 2 */
-static uint8_t temp[2] = {0, 0};                            /* temperature values */
-static uint8_t soil[2] = {0, 0};                            /* soil values */
+volatile static _Bool buttonPress = false; /* zone select button state */
+static _Bool zone = zone1; /* zone 1 or zone 2 */
+static uint8_t temp[2] = { 0, 0 }; /* temperature values */
+static uint8_t soil[2] = { 0, 0 }; /* soil values */
+
+
+static uint8_t servoStates[4] = { 0, 0, 0, 0}; /* soil values */
+static uint8_t servoStates_h[4] = { 0, 0, 0, 0}; /* soil values */
+
+
 
 Values *averagedValues;
 int lightDexData = 0;
@@ -60,27 +67,31 @@ int ventZone2;
 int irrZone1;
 int irrZone2;
 
-void main(void){
+void main(void)
+{
     initAll();
 
     servo = irri1;
     averagedValues = malloc(sizeof(Values));
 
     int q;
-    for (q = 0; q < NUM_SAMPLES_TO_AVERAGE; q++){
-        averagedValues->light[q]=9;
-        averagedValues->tempZoneOne[q]=9;
-        averagedValues->tempZoneTwo[q]=9;
-        averagedValues->moistureZoneOne[q]=9;
-        averagedValues->moistureZoneTwo[q]=9;
+    for (q = 0; q < NUM_SAMPLES_TO_AVERAGE; q++)
+    {
+        averagedValues->light[q] = 9;
+        averagedValues->tempZoneOne[q] = 9;
+        averagedValues->tempZoneTwo[q] = 9;
+        averagedValues->moistureZoneOne[q] = 9;
+        averagedValues->moistureZoneTwo[q] = 9;
     }
 
     // preloop to get some average values
     int i;
-    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++){
+    for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
+    {
         __delay_cycles(10000);
         int sensor = NUM_SENSORS;
-        for (sensor = 0; sensor < NUM_SENSORS; sensor++){
+        for (sensor = 0; sensor < NUM_SENSORS; sensor++)
+        {
             setMux(sensor);
             __delay_cycles(10000);
             storeSensorReadings(sensor, i);
@@ -89,75 +100,128 @@ void main(void){
     }
     int counter = -1;
     setMux(0);
-    while (1){
+
+
+    select_pwm_target(irri1);
+        output_pwm_on();
+        __delay_cycles(100000);
+        output_pwm_idle();
+        __delay_cycles(100000);
+
+        select_pwm_target(vent1);
+        output_pwm_on();
+        __delay_cycles(100000);
+        output_pwm_idle();
+        __delay_cycles(100000);
+        __delay_cycles(100000);
+        __delay_cycles(100000);
+        __delay_cycles(100000);
+
+
+
+        select_pwm_target(irri1);
+        output_pwm_off();
+        __delay_cycles(100000);
+        output_pwm_idle();
+        __delay_cycles(100000);
+
+        select_pwm_target(vent1);
+        output_pwm_off();
+        __delay_cycles(100000);
+        output_pwm_idle();
+
+
+
+    while (1)
+    {
 
         _Bool isDay = isDaytime();
 
         //update sensor readings -----------------------------------
-        counter +=1;
-        int sensor = (counter%NUM_SENSORS);
+        counter += 1;
+        int sensor = (counter % NUM_SENSORS);
         int indexOfData;
         setMux(sensor);
         __delay_cycles(10000);
 
-        if(sensor==lightDex){
-            lightDexData = ((lightDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+        if (sensor == lightDex)
+        {
+            lightDexData = ((lightDexData + 1) % NUM_SAMPLES_TO_AVERAGE);
             indexOfData = lightDexData;
         }
-        else if(sensor==tempZoneOneDex){
-            tempZoneOneDexData = ((tempZoneOneDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+        else if (sensor == tempZoneOneDex)
+        {
+            tempZoneOneDexData = ((tempZoneOneDexData + 1)
+                    % NUM_SAMPLES_TO_AVERAGE);
             indexOfData = tempZoneOneDexData;
         }
-        else if(sensor==tempZoneTwoDex){
-            tempZoneTwoDexData = ((tempZoneTwoDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+        else if (sensor == tempZoneTwoDex)
+        {
+            tempZoneTwoDexData = ((tempZoneTwoDexData + 1)
+                    % NUM_SAMPLES_TO_AVERAGE);
             indexOfData = tempZoneTwoDexData;
         }
-        else if(sensor==moistureZoneOneDex){
-            moistureZoneOneDexData = ((moistureZoneOneDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+        else if (sensor == moistureZoneOneDex)
+        {
+            moistureZoneOneDexData = ((moistureZoneOneDexData + 1)
+                    % NUM_SAMPLES_TO_AVERAGE);
             indexOfData = moistureZoneOneDexData;
         }
-        else if(sensor==moistureZoneTwoDex){
-            moistureZoneTwoDexData = ((moistureZoneTwoDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+        else if (sensor == moistureZoneTwoDex)
+        {
+            moistureZoneTwoDexData = ((moistureZoneTwoDexData + 1)
+                    % NUM_SAMPLES_TO_AVERAGE);
             indexOfData = moistureZoneTwoDexData;
         }
 
         storeSensorReadings(sensor, indexOfData);
         __delay_cycles(100000);
-        if (counter >10000){
+        if (counter > 10000)
+        {
             counter = 0;
         }
         // -----------------------------------------------------------
         // show zones
         zone_select();
 
-        temp[0]= getAverageSensorReading(tempZoneOneDex);
-        temp[1]= getAverageSensorReading(tempZoneTwoDex);
-        soil[0]= getAverageSensorReading(moistureZoneOneDex);
-        soil[1]= getAverageSensorReading(moistureZoneTwoDex);
-        displayLCD(zone, temp, soil);           /* display results */
+        temp[0] = getAverageSensorReading(tempZoneOneDex);
+        temp[1] = getAverageSensorReading(tempZoneTwoDex);
+        soil[0] = getAverageSensorReading(moistureZoneOneDex);
+        soil[1] = getAverageSensorReading(moistureZoneTwoDex);
+        displayLCD(zone, temp, soil); /* display results */
         // -----------------------------------------------------------
         // deal with leds
 
-        if(isDay){ // ventilation
+        if (isDay)
+        { // ventilation
             ventZone1 = (getAverageSensorReading(tempZoneOneDex) > ventThresh);
             ventZone2 = (getAverageSensorReading(tempZoneTwoDex) > ventThresh);
-        } else { // irrigation
-            irrZone1= (getAverageSensorReading(moistureZoneOneDex)<irrigationThresh);
-            irrZone2= (getAverageSensorReading(moistureZoneTwoDex)<irrigationThresh);
         }
+        else
+        { // irrigation
+            irrZone1 = (getAverageSensorReading(moistureZoneOneDex)
+                    < irrigationThresh);
+            irrZone2 = (getAverageSensorReading(moistureZoneTwoDex)
+                    < irrigationThresh);
+        }
+
+
         set_led_ind(irri1, irrZone1 && !isDay);
-
-//        if(irrZone1){
-//            select_pwm_target(irri1);
-//            output_pwm_on();
-//            __delay_cycles(100000);
-//        }
-
         set_led_ind(irri2, irrZone2 && !isDay);
         set_led_ind(vent1, ventZone1 && isDay);
         set_led_ind(vent2, ventZone2 && isDay);
-        //--------------------------------------
 
+        servoStates_h[irri1] = servoStates[irri1];
+        servoStates_h[irri2] = servoStates[irri2];
+        servoStates_h[vent1] = servoStates[vent1];
+        servoStates_h[vent2] = servoStates[vent2];
+
+        servoStates[irri1] = irrZone1 && !isDay;
+        servoStates[irri2] = irrZone2 && !isDay;
+        servoStates[vent1] = ventZone1 && isDay;
+        servoStates[vent2] = ventZone2 && isDay;
+
+        update_servos();
     }
 }
 void Init_GPIO(void)
@@ -450,7 +514,8 @@ void ADC_ISR(void)
     }
 }
 
-void initAll(void){
+void initAll(void)
+{
     //Turn off interrupts during initialization
     __disable_interrupt();
 
@@ -555,7 +620,7 @@ void output_pwm_idle()
     param.timerPeriod = TIMER_A_PERIOD; //Defined in main.h
     param.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
     param.compareOutputMode = TIMER_A_OUTPUTMODE_RESET_SET;
-    param.dutyCycle = 0; //Defined in main.h
+    param.dutyCycle = 20000; //Defined in main.h
 
     Timer_A_outputPWM(TIMER_A0_BASE, &param);
 }
@@ -584,15 +649,17 @@ void select_pwm_target(int selected)
     return;
 }
 
-void read_adc(){
-    if (ADCState == 0) {
+void read_adc()
+{
+    if (ADCState == 0)
+    {
         ADCState = 1; //Set flag to indicate ADC is busy - ADC ISR (interrupt) will clear it
         ADC_startConversion(ADC_BASE, ADC_SINGLECHANNEL);
     }
 }
 
-
-int getAverageSensorReading(int sensor){
+int getAverageSensorReading(int sensor)
+{
     int i;
     int total = 0;
     if (sensor == lightDex)
@@ -643,31 +710,32 @@ int storeSensorReadings(int sensor, int i)
     else if (sensor == tempZoneOneDex)
     {
         // assuming 10mv/c
-        averagedValues->tempZoneOne[i] = (ADCResult/10);
+        averagedValues->tempZoneOne[i] = (ADCResult / 10);
     }
     else if (sensor == tempZoneTwoDex)
     {
         // assuming 10mv/c
-        averagedValues->tempZoneTwo[i] = ADCResult/10;
+        averagedValues->tempZoneTwo[i] = ADCResult / 10;
     }
     else if (sensor == moistureZoneOneDex)
     {
         // near 0 when not in water
         // ~500-700 when in water
         // displays as a percentage out of 700
-        averagedValues->moistureZoneOne[i] = ADCResult/7;
+        averagedValues->moistureZoneOne[i] = ADCResult / 7;
     }
     else if (sensor == moistureZoneTwoDex)
     {
         // near 0 when not in water
         // ~500-700 when in water
         // displays as a percentage out of 700
-        averagedValues->moistureZoneTwo[i] = ADCResult/7;
+        averagedValues->moistureZoneTwo[i] = ADCResult / 7;
     }
     return 1;
 }
 
-int isDaytime(){
+int isDaytime()
+{
     lightVal = getAverageSensorReading(lightDex);
     isOver = lightVal > 700;
     return isOver;
@@ -675,11 +743,11 @@ int isDaytime(){
 
 void zone_select(void)
 {
-    if ((! GPIO_getInputPinValue(SW1_PORT, SW1_PIN)) && (! buttonPress)) /* button press */
+    if ((!GPIO_getInputPinValue(SW1_PORT, SW1_PIN)) && (!buttonPress)) /* button press */
     {
         buttonPress = true;
 
-        if (! zone) /* zone 1 -> zone 2*/
+        if (!zone) /* zone 1 -> zone 2*/
         {
             zone = zone2;
             displayScrollText("ZONE 2");
@@ -694,26 +762,25 @@ void zone_select(void)
         buttonPress = false;
 }
 
-
 /* LCD display */
 void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil)
 {
     showChar('T', pos1);
     showChar('M', pos4);
 
-    if (! zone) /* zone 1*/
+    if (!zone) /* zone 1*/
     {
-        showChar(((temp[0]/10)+'0'), pos2);
-        showChar(((temp[0]%10)+'0'), pos3);
-        showChar(((soil[0]/10)+'0'), pos5);
-        showChar(((soil[0]%10)+'0'), pos6);
+        showChar(((temp[0] / 10) + '0'), pos2);
+        showChar(((temp[0] % 10) + '0'), pos3);
+        showChar(((soil[0] / 10) + '0'), pos5);
+        showChar(((soil[0] % 10) + '0'), pos6);
     }
     else /* zone 2*/
     {
-        showChar(((temp[1]/10)+'0'), pos2);
-        showChar(((temp[1]%10)+'0'), pos3);
-        showChar(((soil[1]/10)+'0'), pos5);
-        showChar(((soil[1]%10)+'0'), pos6);
+        showChar(((temp[1] / 10) + '0'), pos2);
+        showChar(((temp[1] % 10) + '0'), pos3);
+        showChar(((soil[1] / 10) + '0'), pos5);
+        showChar(((soil[1] % 10) + '0'), pos6);
     }
 }
 
@@ -725,6 +792,7 @@ void set_led_ind(int selected, int state)
         if (state == 0)
         {
             GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN2);
+
         }
         else
         {
@@ -763,5 +831,25 @@ void set_led_ind(int selected, int state)
         break;
     }
     return;
+}
+
+void update_servos(){
+    int h;
+    for(h = 0; h < 4; h++){
+        if(servoStates[h] != servoStates_h[h]){
+            select_pwm_target(h);
+
+            if(servoStates[h]){
+                output_pwm_on();
+            }
+            else{
+                output_pwm_off();
+
+            }
+            __delay_cycles(100000);
+            output_pwm_idle();
+            __delay_cycles(100000);
+        }
+    }
 }
 
