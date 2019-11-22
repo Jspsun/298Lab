@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "hal_LCD.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 #define NUM_SAMPLES_TO_AVERAGE 10 //TODO: tweak if needed
 #define lightDex 4
@@ -10,6 +11,9 @@
 #define tempZoneTwoDex 3
 #define moistureZoneOneDex 2
 #define moistureZoneTwoDex 0
+
+#define zone1 0
+#define zone2 1
 
 char ADCState = 0; //Busy state of the ADC
 int16_t ADCResult = 0; //Storage for the ADC conversion result
@@ -27,10 +31,23 @@ typedef struct {
 
 int setMux(int n);
 int storeSensorReadings(int sensor, int i);
-float getAverageSensorReading(int sensor);
+int getAverageSensorReading(int sensor);
 void initAll(void);
+_Bool isDaytime();
+void zone_select(void);
+void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil);
+
+volatile static _Bool buttonPress = false;                  /* zone select button state */
+static _Bool zone = zone1;                                  /* zone 1 or zone 2 */
+static uint8_t temp[2] = {0, 0};                            /* temperature values */
+static uint8_t soil[2] = {0, 0};                            /* soil values */
 
 Values *averagedValues;
+int lightDexData = 0;
+int tempZoneOneDexData = 0;
+int tempZoneTwoDexData = 0;
+int moistureZoneOneDexData = 0;
+int moistureZoneTwoDexData = 0;
 
 void main(void){
 
@@ -63,52 +80,50 @@ void main(void){
     }
     int counter = -1;
 
-    int displayDur=0;
-    int muxState = 0;
-    int buttonState = 0;
+//    int displayDur=0;
+//    int muxState = 0;
+//    int buttonState = 0;
     setMux(0);
     while (1){
-//        counter +=1;
-//        int sensor = (counter%NUM_SENSORS);
-//        setMux(sensor);
-//        __delay_cycles(10000);
-//        storeSensorReadings(sensor, i);
-//
-//        __delay_cycles(100000);
-        if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 1)
-                        & (buttonState == 0)) //Look for rising edge
-                {
-                    output_pwm_off();
 
-                    buttonState = 1;                //Capture new button state
+        _Bool isDay = isDaytime();
 
-                }
-                if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN) == 0) // if button pressed, change state
-                & (buttonState == 1)) //Look for falling edge
-                {
-                    output_pwm_on();
-                    buttonState = 0;                          //Capture new button state
-                    // --------------------------------
-                    muxState = (muxState + 1) % 5;
-                    setMux(muxState); // set GPIO pins to value of mux toggle
-                    displayDur = 0; // force re-set of lcd display
+        //update sensor readings -----------------------------------
+        counter +=1;
+        int sensor = (counter%NUM_SENSORS);
+        int indexOfData;
+        setMux(sensor);
+        __delay_cycles(10000);
 
-                }
+        if(sensor==lightDex){
+            lightDexData = ((lightDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+            indexOfData = lightDexData;
+        }
+        else if(sensor==tempZoneOneDex){
+            tempZoneOneDexData = ((tempZoneOneDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+            indexOfData = tempZoneOneDexData;
+        }
+        else if(sensor==tempZoneTwoDex){
+            tempZoneTwoDexData = ((tempZoneTwoDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+            indexOfData = tempZoneTwoDexData;
+        }
+        else if(sensor==moistureZoneOneDex){
+            moistureZoneOneDexData = ((moistureZoneOneDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+            indexOfData = moistureZoneOneDexData;
+        }
+        else if(sensor==moistureZoneTwoDex){
+            moistureZoneTwoDexData = ((moistureZoneTwoDexData +1) % NUM_SAMPLES_TO_AVERAGE);
+            indexOfData = moistureZoneTwoDexData;
+        }
 
-
-
-                // process readings
-
-                //Start an ADC conversion (if it's not busy) in Single-Channel, Single Conversion Mode
-                read_adc();
-
-
-                if (displayDur == 0)
-                {
-                    showHex((int) ADCResult); //Put the previous result on the LCD display
-                    displayDur = 1500;
-                }
-                displayDur -= 1;
+        storeSensorReadings(sensor, indexOfData);
+        __delay_cycles(100000);
+        if (counter >10000){
+            counter = 0;
+        }
+        // -----------------------------------------------------------
+        zone_select();
+        displayLCD(zone, temp, soil);           /* display results */
 
     }
 }
@@ -594,9 +609,9 @@ void read_adc(){
 }
 
 
-float getAverageSensorReading(int sensor){
-    int i = 0;
-    float total = 0.0;
+int getAverageSensorReading(int sensor){
+    int i;
+    int total = 0;
     if (sensor == lightDex)
     {
         for (i = 0; i < NUM_SAMPLES_TO_AVERAGE; i++)
@@ -644,20 +659,81 @@ int storeSensorReadings(int sensor, int i)
     }
     else if (sensor == tempZoneOneDex)
     {
-        averagedValues->tempZoneOne[i] = ADCResult;
+        // assuming 10mv/c
+        averagedValues->tempZoneOne[i] = (ADCResult/10);
     }
     else if (sensor == tempZoneTwoDex)
     {
-        averagedValues->tempZoneTwo[i] = ADCResult;
+        // assuming 10mv/c
+        averagedValues->tempZoneTwo[i] = ADCResult/10;
     }
     else if (sensor == moistureZoneOneDex)
     {
-        averagedValues->moistureZoneOne[i] = ADCResult;
+        // near 0 when not in water
+        // ~500-600 when in water
+        averagedValues->moistureZoneOne[i] = ADCResult/10;
     }
     else if (sensor == moistureZoneTwoDex)
     {
-        averagedValues->moistureZoneTwo[i] = ADCResult;
+        // near 0 when not in water
+        // ~500-600 when in water
+        averagedValues->moistureZoneTwo[i] = ADCResult/10;
     }
     return 1;
+}
+
+// TODO: this method seems bugged
+_Bool isDaytime(){
+    int lightVal = getAverageSensorReading(lightDex);
+
+    if(lightVal >= 700){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void zone_select(void)
+{
+    if ((! GPIO_getInputPinValue(SW1_PORT, SW1_PIN)) && (! buttonPress)) /* button press */
+    {
+        buttonPress = true;
+
+        if (! zone) /* zone 1 -> zone 2*/
+        {
+            zone = zone2;
+            displayScrollText("ZONE 2");
+        }
+        else /* zone 2 -> zone 1*/
+        {
+            zone = zone1;
+            displayScrollText("ZONE 1");
+        }
+    }
+    else if ((GPIO_getInputPinValue(SW1_PORT, SW1_PIN)) && (buttonPress)) /* botton release */
+        buttonPress = false;
+}
+
+
+/* LCD display */
+void displayLCD(_Bool zone, unsigned char *temp, unsigned char *soil)
+{
+    showChar('T', pos1);
+    showChar('M', pos4);
+
+    if (! zone) /* zone 1*/
+    {
+        showChar(((temp[0]/10)+'0'), pos2);
+        showChar(((temp[0]%10)+'0'), pos3);
+        showChar(((soil[0]/10)+'0'), pos5);
+        showChar(((soil[0]%10)+'0'), pos6);
+    }
+    else /* zone 2*/
+    {
+        showChar(((temp[1]/10)+'0'), pos2);
+        showChar(((temp[1]%10)+'0'), pos3);
+        showChar(((soil[1]/10)+'0'), pos5);
+        showChar(((soil[1]%10)+'0'), pos6);
+    }
 }
 
